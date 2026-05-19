@@ -21,7 +21,7 @@ function formatStreak(n: number) {
 
 export default function Dashboard() {
   const {
-    sessions, activeSession, userName, measurements,
+    sessions, activeSession, userName, userPhoto, measurements,
     currentStreak, totalWorkouts, totalXP, onboardingDone, completeOnboarding,
   } = useStore();
 
@@ -98,10 +98,14 @@ export default function Dashboard() {
           <p className="text-slate-400 text-sm">Good {getGreeting()},</p>
           <h1 className="text-2xl font-bold text-white">{userName || "Athlete"} 👋</h1>
         </div>
-        <div className="streak-badge flex items-center gap-1">
-          <Flame size={13} />
-          {currentStreak}d
-        </div>
+        {userPhoto ? (
+          <img src={userPhoto} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-white/10" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="streak-badge flex items-center gap-1">
+            <Flame size={13} />
+            {currentStreak}d
+          </div>
+        )}
       </div>
 
       {/* Today's workout card */}

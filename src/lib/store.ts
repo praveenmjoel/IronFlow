@@ -18,6 +18,7 @@ interface AppState {
 
   /* ─── User profile ─── */
   userName: string;
+  userPhoto: string | null;
   onboardingDone: boolean;
 
   /* ─── Measurements ─── */
@@ -31,7 +32,7 @@ interface AppState {
 
   /* ─── Actions ─── */
   setUid: (uid: string) => void;
-  hydrate: (uid: string) => Promise<void>;
+  hydrate: (uid: string, googleName?: string, googlePhoto?: string) => Promise<void>;
 
   startWorkout: (dayNumber: number, date?: string) => void;
   updateWarmupCheck: (stepId: string, done: boolean) => void;
@@ -112,6 +113,7 @@ export const useStore = create<AppState>()((set, get) => ({
   sessions: [],
   activeSession: null,
   userName: "",
+  userPhoto: null,
   onboardingDone: false,
   measurements: [],
   currentStreak: 0,
@@ -123,18 +125,22 @@ export const useStore = create<AppState>()((set, get) => ({
 
   setUid: (uid) => set({ uid, authReady: true }),
 
-  hydrate: async (uid) => {
+  hydrate: async (uid, googleName, googlePhoto) => {
     const [profile, sessions, measurements] = await Promise.all([
       loadProfile(uid),
       loadSessions(uid),
       loadMeasurements(uid),
     ]);
 
+    const userName = profile?.userName || googleName || "";
+    const onboardingDone = profile?.onboardingDone ?? (!!googleName);
+
     set({
       sessions,
       measurements,
-      userName:       profile?.userName       ?? "",
-      onboardingDone: profile?.onboardingDone ?? false,
+      userName,
+      userPhoto:      googlePhoto ?? null,
+      onboardingDone,
       currentStreak:  profile?.currentStreak  ?? 0,
       longestStreak:  profile?.longestStreak  ?? 0,
       totalWorkouts:  profile?.totalWorkouts  ?? 0,
@@ -142,6 +148,14 @@ export const useStore = create<AppState>()((set, get) => ({
       authReady: true,
       uid,
     });
+
+    // If this is a first Google sign-in with no saved profile, persist it now
+    if (!profile && googleName) {
+      saveProfile(uid, {
+        userName, onboardingDone: true,
+        currentStreak: 0, longestStreak: 0, totalWorkouts: 0, totalXP: 0,
+      }).catch(console.error);
+    }
   },
 
   /* ─── Workout lifecycle ─── */

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
-import FirebaseProvider from "@/components/FirebaseProvider";
+import ClientProviders from "@/components/ClientProviders";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -22,12 +22,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.className}>
       <body className="min-h-screen">
-        <FirebaseProvider>
+        <ClientProviders>
           <main className="max-w-lg mx-auto pb-24 min-h-screen">
             {children}
           </main>
           <NavBar />
-        </FirebaseProvider>
+        </ClientProviders>
       </body>
     </html>
   );
