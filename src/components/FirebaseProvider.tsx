@@ -67,6 +67,7 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
               user.uid,
               user.displayName ?? undefined,
               user.photoURL ?? undefined,
+              user.email ?? undefined,
             );
           } catch (e) {
             console.error("Firestore hydration failed:", e);

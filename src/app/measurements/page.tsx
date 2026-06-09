@@ -25,7 +25,7 @@ const DEFAULT_FORM: Omit<BodyMeasurement, "id"> = {
 };
 
 export default function MeasurementsPage() {
-  const { measurements, addMeasurement } = useStore();
+  const { measurements, addMeasurement, measurementSaveError } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Omit<BodyMeasurement, "id">>(DEFAULT_FORM);
   const [activeChart, setActiveChart] = useState<MetricKey>("weight");
@@ -58,6 +58,12 @@ export default function MeasurementsPage() {
 
   return (
     <div className="px-4 pt-6 pb-4 space-y-5 animate-fade-in">
+      {measurementSaveError && (
+        <div className="rounded-xl p-3 bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+          ⚠️ Measurement couldn&apos;t be saved to the cloud: <span className="font-medium">{measurementSaveError}</span>.
+          {" "}Your Firestore security rules may have expired — update them in the Firebase Console (Database → Rules) to allow authenticated writes.
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Ruler size={20} className="text-violet-400" /> Body Measurements

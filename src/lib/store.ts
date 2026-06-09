@@ -18,11 +18,13 @@ interface AppState {
 
   /* ─── User profile ─── */
   userName: string;
+  userEmail: string | null;
   userPhoto: string | null;
   onboardingDone: boolean;
 
   /* ─── Measurements ─── */
   measurements: BodyMeasurement[];
+  measurementSaveError: string | null;
 
   /* ─── Stats ─── */
   currentStreak: number;
@@ -32,7 +34,7 @@ interface AppState {
 
   /* ─── Actions ─── */
   setUid: (uid: string) => void;
-  hydrate: (uid: string, googleName?: string, googlePhoto?: string) => Promise<void>;
+  hydrate: (uid: string, googleName?: string, googlePhoto?: string, googleEmail?: string) => Promise<void>;
 
   startWorkout: (dayNumber: number, date?: string) => void;
   updateWarmupCheck: (stepId: string, done: boolean) => void;
@@ -113,9 +115,11 @@ export const useStore = create<AppState>()((set, get) => ({
   sessions: [],
   activeSession: null,
   userName: "",
+  userEmail: null,
   userPhoto: null,
   onboardingDone: false,
   measurements: [],
+  measurementSaveError: null,
   currentStreak: 0,
   longestStreak: 0,
   totalWorkouts: 0,
@@ -125,7 +129,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   setUid: (uid) => set({ uid, authReady: true }),
 
-  hydrate: async (uid, googleName, googlePhoto) => {
+  hydrate: async (uid, googleName, googlePhoto, googleEmail) => {
     const [profile, sessions, measurements] = await Promise.all([
       loadProfile(uid),
       loadSessions(uid),
@@ -139,6 +143,7 @@ export const useStore = create<AppState>()((set, get) => ({
       sessions,
       measurements,
       userName,
+      userEmail:      googleEmail ?? null,
       userPhoto:      googlePhoto ?? null,
       onboardingDone,
       currentStreak:  profile?.currentStreak  ?? 0,
@@ -248,7 +253,29 @@ export const useStore = create<AppState>()((set, get) => ({
         completionPercent: calcCompletion(s.activeSession, s.activeSession.dayNumber),
       };
       const sessions = [...s.sessions.filter(x => x.id !== completed.id), completed];
-      const newStreak = s.currentStreak + 1;
+
+      // Streak: only counts if you worked out on consecutive calendar days
+      const today = todayISO();
+      const yesterday = (() => {
+        const d = new Date(); d.setDate(d.getDate() - 1);
+        return d.toISOString().split("T")[0];
+      })();
+      const prevDates = s.sessions
+        .filter(x => x.completedAt && x.id !== completed.id)
+        .map(x => x.date)
+        .sort().reverse();
+      const lastDate = prevDates[0];
+      let newStreak: number;
+      if (!lastDate) {
+        newStreak = 1;
+      } else if (lastDate === yesterday) {
+        newStreak = s.currentStreak + 1;   // consecutive — keep the streak going
+      } else if (lastDate === today) {
+        newStreak = s.currentStreak;        // second workout same day — no change
+      } else {
+        newStreak = 1;                      // gap — reset
+      }
+
       const xp = Math.round(completed.completionPercent * 2.5);
       const next = {
         sessions,
@@ -277,8 +304,17 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addMeasurement: (m) => {
     const measurement: BodyMeasurement = { ...m, id: `meas-${Date.now()}` };
+    const uid = get().uid;
+    if (!uid) { console.error("addMeasurement: no uid — not signed in"); return; }
     set(s => ({ measurements: [...s.measurements, measurement] }));
-    saveMeasurement(get().uid!, measurement).catch(console.error);
+    saveMeasurement(uid, measurement).catch(e => {
+      console.error("Firestore write failed for measurement:", e);
+      // Roll back the optimistic update so stale data doesn't mislead
+      set(s => ({
+        measurements: s.measurements.filter(x => x.id !== measurement.id),
+        measurementSaveError: (e as Error).message ?? "Failed to save",
+      }));
+    });
   },
 
   /* ─── Onboarding ─── */

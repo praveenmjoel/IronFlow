@@ -165,9 +165,9 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
       { id: "w2-3", activity: "Shoulder Rolls", reps: 15 },
       { id: "w2-4", activity: "Wrist Circles", reps: 20, note: "20 each direction" },
       { id: "w2-5", activity: "Elbow Flex–Extend", reps: 15, note: "No weight — prime the elbow joint" },
-      { id: "w2-6", activity: "Light DB Curl (ramp-up set 1)", reps: 15, note: "Rod only — slow and controlled" },
-      { id: "w2-7", activity: "Ramp-Up Curl Set 2 (50%)", reps: 12, note: "~1.5 kg per dumbbell — easy, controlled. Rest 30 sec" },
-      { id: "w2-8", activity: "Ramp-Up Curl Set 3 (70%)", reps: 8,  note: "~2 kg per dumbbell — smooth, slightly challenging. Rest 45 sec" },
+      { id: "w2-6", activity: "Light DB Curl (ramp-up set 1)", reps: 15, note: "Rod only — zero plates. Prime the movement pattern." },
+      { id: "w2-7", activity: "Ramp-Up Curl Set 2 (~50%)", reps: 12, note: "1.5 kg per side = 3 kg dumbbell. Easy, controlled. Rest 30 sec." },
+      { id: "w2-8", activity: "Ramp-Up Curl Set 3 (~70%)", reps: 8,  note: "2 kg per side = 4 kg dumbbell. Challenging but smooth. Rest 45 sec." },
     ],
     exercises: [
       {
@@ -592,8 +592,8 @@ export const WORKOUT_PROGRAM: WorkoutDay[] = [
       { id: "w6-5", activity: "Arm Circles", reps: 20, note: "20 forward + 20 back" },
       { id: "w6-6", activity: "Shoulder Rolls", reps: 15 },
       { id: "w6-7", activity: "Bodyweight Squats", reps: 10, note: "Slow, controlled" },
-      { id: "w6-8", activity: "Barbell Curl Ramp-Up Set 1 (50%)", reps: 12, note: "Empty rod only" },
-      { id: "w6-9", activity: "Barbell Curl Ramp-Up Set 2 (70%)", reps: 8,  note: "1.25 kg per side" },
+      { id: "w6-8", activity: "Barbell Curl Ramp-Up Set 1 (~50%)", reps: 12, note: "1.5 kg per side = 3 kg total plates. ~50% of working weight." },
+      { id: "w6-9", activity: "Barbell Curl Ramp-Up Set 2 (~70%)", reps: 8,  note: "1.25+1.25 per side = 5 kg total plates. ~70% of working weight." },
     ],
     exercises: [
       {

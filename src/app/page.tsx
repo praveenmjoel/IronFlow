@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useStore } from "@/lib/store";
 import { WORKOUT_PROGRAM } from "@/lib/workoutData";
 import ProgressRing from "@/components/ProgressRing";
-import { Flame, Zap, TrendingUp, Calendar, Dumbbell, Activity, ChevronRight, Plus } from "lucide-react";
+import { Flame, Zap, TrendingUp, Calendar, Dumbbell, Activity, ChevronRight, Plus, LogOut } from "lucide-react";
 import { getDayColor, getIntensityLabel, dateIsToday, formatDate } from "@/lib/utils";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -21,7 +23,7 @@ function formatStreak(n: number) {
 
 export default function Dashboard() {
   const {
-    sessions, activeSession, userName, userPhoto, measurements,
+    sessions, activeSession, userName, userEmail, userPhoto, measurements,
     currentStreak, totalWorkouts, totalXP, onboardingDone, completeOnboarding,
   } = useStore();
 
@@ -97,9 +99,10 @@ export default function Dashboard() {
         <div>
           <p className="text-slate-400 text-sm">Good {getGreeting()},</p>
           <h1 className="text-2xl font-bold text-white">{userName || "Athlete"} 👋</h1>
+          {userEmail && <p className="text-xs text-slate-500 mt-0.5">{userEmail}</p>}
         </div>
         {userPhoto ? (
-          <img src={userPhoto} alt="avatar" className="w-9 h-9 rounded-full object-cover border-2 border-white/10" referrerPolicy="no-referrer" />
+          <img src={userPhoto} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-white/10 flex-shrink-0" referrerPolicy="no-referrer" />
         ) : (
           <div className="streak-badge flex items-center gap-1">
             <Flame size={13} />
@@ -284,6 +287,28 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* Account */}
+      <div className="card p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          {userPhoto
+            ? <img src={userPhoto} alt="avatar" className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0" referrerPolicy="no-referrer" />
+            : <div className="w-9 h-9 rounded-full bg-iron-500/20 flex items-center justify-center flex-shrink-0 text-sm">
+                {(userName || "?")[0].toUpperCase()}
+              </div>
+          }
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-white truncate">{userName || "Athlete"}</p>
+            {userEmail && <p className="text-xs text-slate-500 truncate">{userEmail}</p>}
+          </div>
+        </div>
+        <button
+          onClick={() => signOut(auth)}
+          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-400 transition-colors flex-shrink-0 ml-3"
+        >
+          <LogOut size={13} />
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }
