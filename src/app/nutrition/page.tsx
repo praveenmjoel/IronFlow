@@ -6,12 +6,12 @@ import { Utensils, Plus, Trash2, Sparkles, ChevronDown, Clock, AlertCircle, Load
 import { formatDate } from "@/lib/utils";
 
 const MEAL_TYPES: { value: MealType; label: string; emoji: string }[] = [
-  { value: "breakfast",     label: "Breakfast",     emoji: "🌅" },
-  { value: "lunch",         label: "Lunch",         emoji: "☀️" },
-  { value: "dinner",        label: "Dinner",        emoji: "🌙" },
-  { value: "snack",         label: "Snack",         emoji: "🍎" },
-  { value: "pre-workout",   label: "Pre-Workout",   emoji: "⚡" },
-  { value: "post-workout",  label: "Post-Workout",  emoji: "💪" },
+  { value: "breakfast",     label: "Breakfast",    emoji: "🌅" },
+  { value: "lunch",         label: "Lunch",        emoji: "☀️" },
+  { value: "dinner",        label: "Dinner",       emoji: "🌙" },
+  { value: "snack",         label: "Snack",        emoji: "🍎" },
+  { value: "pre-workout",   label: "Pre-Workout",  emoji: "⚡" },
+  { value: "post-workout",  label: "Post-Workout", emoji: "💪" },
 ];
 
 const DEFAULT_FORM = {
@@ -43,7 +43,7 @@ export default function NutritionPage() {
     return sorted[0]?.weight ?? null;
   }, [measurements]);
 
-  // Group entries by date
+  // Group entries by date, newest first
   const grouped = useMemo(() => {
     const map = new Map<string, typeof foodEntries>();
     [...foodEntries]
@@ -57,17 +57,17 @@ export default function NutritionPage() {
   }, [foodEntries]);
 
   async function handleSave() {
-    if (!form.name.trim() || !form.quantity.trim()) return;
+    if (!form.name.trim()) return;
     setSaving(true);
     await addFoodEntry({
       date: form.date,
       time: form.time,
       name: form.name.trim(),
-      quantity: form.quantity.trim(),
+      quantity: form.quantity.trim() || undefined,
       mealType: form.mealType,
       notes: form.notes.trim() || undefined,
     });
-    setForm(DEFAULT_FORM);
+    setForm({ ...DEFAULT_FORM, time: new Date().toTimeString().slice(0, 5) });
     setShowForm(false);
     setSaving(false);
   }
@@ -77,7 +77,6 @@ export default function NutritionPage() {
     setNutritionLoading(true);
     setCoachError(null);
 
-    // Send last 50 entries (sorted newest first → reverse for prompt)
     const recent = [...foodEntries]
       .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
       .slice(0, 50)
@@ -89,13 +88,10 @@ export default function NutritionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entries: recent, userName, latestWeight }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Coaching request failed");
-      }
-      const coaching = await res.json();
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Coaching request failed");
       setNutritionInsight({
-        ...coaching,
+        ...json,
         id: `nc-${Date.now()}`,
         generatedAt: new Date().toISOString(),
         entriesAnalyzed: recent.length,
@@ -128,8 +124,9 @@ export default function NutritionPage() {
       {/* Log form */}
       {showForm && (
         <div className="card p-5 animate-slide-up space-y-4">
-          <h3 className="font-semibold text-white">Log Food</h3>
+          <h3 className="font-semibold text-white">What did you eat?</h3>
 
+          {/* Date + Time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Date</label>
@@ -153,30 +150,40 @@ export default function NutritionPage() {
             </div>
           </div>
 
+          {/* Meal description — the key field */}
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Food / Meal name</label>
-            <input
-              type="text"
+            <label className="text-xs text-slate-400 mb-1 block">
+              Describe the meal <span className="text-slate-600">(include everything you ate)</span>
+            </label>
+            <textarea
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. 2 boiled eggs + brown bread toast"
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+              placeholder="e.g. 1 boiled egg + 4 small rotis + tomato chutney"
+              rows={2}
+              className="w-full rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none resize-none"
               style={{ background: "#161d2e", border: "1px solid rgba(255,255,255,0.1)" }}
             />
+            <p className="text-[11px] text-slate-600 mt-1">
+              Put everything in one line — e.g. &quot;2 chapatis + dal + salad&quot; or &quot;protein shake + banana&quot;
+            </p>
           </div>
 
+          {/* Portion size — optional */}
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Quantity / Serving</label>
+            <label className="text-xs text-slate-400 mb-1 block">
+              Portion / serving size <span className="text-slate-600">(optional)</span>
+            </label>
             <input
               type="text"
               value={form.quantity}
               onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
-              placeholder="e.g. 200g, 1 bowl, 2 pieces"
+              placeholder="e.g. 1 plate, large portion, 300g…"
               className="w-full rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
               style={{ background: "#161d2e", border: "1px solid rgba(255,255,255,0.1)" }}
             />
           </div>
 
+          {/* Meal type */}
           <div>
             <label className="text-xs text-slate-400 mb-2 block">Meal type</label>
             <div className="grid grid-cols-3 gap-2">
@@ -196,13 +203,16 @@ export default function NutritionPage() {
             </div>
           </div>
 
+          {/* Notes */}
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Notes (optional)</label>
+            <label className="text-xs text-slate-400 mb-1 block">
+              Notes <span className="text-slate-600">(optional)</span>
+            </label>
             <input
               type="text"
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder="e.g. home cooked, organic…"
+              placeholder="e.g. home cooked, felt full, late dinner…"
               className="w-full rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
               style={{ background: "#161d2e", border: "1px solid rgba(255,255,255,0.1)" }}
             />
@@ -211,7 +221,7 @@ export default function NutritionPage() {
           <div className="flex gap-3">
             <button
               onClick={handleSave}
-              disabled={saving || !form.name.trim() || !form.quantity.trim()}
+              disabled={saving || !form.name.trim()}
               className="btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
             >
               {saving ? "Saving…" : "Save Entry"}
@@ -247,9 +257,17 @@ export default function NutritionPage() {
       )}
 
       {coachError && (
-        <div className="rounded-xl p-3 bg-red-500/10 border border-red-500/20 text-sm text-red-400 flex gap-2">
-          <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-          <span>{coachError}</span>
+        <div className="rounded-xl p-4 bg-red-500/10 border border-red-500/20 text-sm text-red-400 space-y-1">
+          <div className="flex gap-2 items-start">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+            <span className="font-medium">Coaching failed</span>
+          </div>
+          <p className="text-xs text-red-300/80 pl-6 leading-relaxed">{coachError}</p>
+          {coachError.includes("GEMINI_API_KEY") && (
+            <p className="text-xs text-slate-500 pl-6 mt-1">
+              Go to Vercel → Settings → Environment Variables → add <code className="bg-white/10 px-1 rounded">GEMINI_API_KEY</code>, then redeploy.
+            </p>
+          )}
         </div>
       )}
 
@@ -260,19 +278,19 @@ export default function NutritionPage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors ${
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === tab
                   ? "bg-white/10 text-white"
                   : "text-slate-500 hover:text-slate-300"
               }`}
             >
-              {tab === "log" ? `📋 Food Log (${foodEntries.length})` : "🤖 Coaching"}
+              {tab === "log" ? `📋 Food Log (${foodEntries.length})` : "🤖 AI Coaching"}
             </button>
           ))}
         </div>
       )}
 
-      {/* Food Log */}
+      {/* ── Food Log Tab ── */}
       {activeTab === "log" && (
         <>
           {grouped.length === 0 ? (
@@ -296,10 +314,11 @@ export default function NutritionPage() {
                       <div key={entry.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                         <span className="text-xl flex-shrink-0 mt-0.5">{mealEmoji(entry.mealType)}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white">{entry.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-slate-500">{entry.quantity}</span>
-                            <span className="text-slate-700">·</span>
+                          <p className="text-sm font-medium text-white leading-snug">{entry.name}</p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            {entry.quantity && (
+                              <span className="text-xs text-slate-500">{entry.quantity}</span>
+                            )}
                             <span className="text-xs text-slate-500 flex items-center gap-1">
                               <Clock size={10} />{entry.time}
                             </span>
@@ -325,25 +344,35 @@ export default function NutritionPage() {
         </>
       )}
 
-      {/* Coaching Tab */}
+      {/* ── AI Coaching Tab ── */}
       {activeTab === "coaching" && (
         <>
           {!nutritionInsight ? (
             <div className="text-center py-12">
               <Sparkles size={40} className="text-slate-700 mx-auto mb-4" />
               <p className="text-slate-400 mb-2">No coaching yet</p>
-              <p className="text-sm text-slate-600">Log some food entries, then tap the button above to get AI coaching</p>
+              <p className="text-sm text-slate-600">Log some meals, then tap the button above</p>
             </div>
           ) : (
             <div className="space-y-4">
               {/* Meta */}
               <div className="flex items-center justify-between text-xs text-slate-500 px-1">
                 <span>Based on {nutritionInsight.entriesAnalyzed} entries</span>
-                <span>{new Date(nutritionInsight.generatedAt).toLocaleDateString("en", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                <span>
+                  {new Date(nutritionInsight.generatedAt).toLocaleDateString("en", {
+                    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                  })}
+                </span>
               </div>
 
               {/* Summary */}
-              <div className="card p-5" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(59,130,246,0.08))", border: "1px solid rgba(16,185,129,0.2)" }}>
+              <div
+                className="card p-5"
+                style={{
+                  background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(59,130,246,0.08))",
+                  border: "1px solid rgba(16,185,129,0.2)",
+                }}
+              >
                 <h3 className="text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2">
                   <Sparkles size={14} /> Overall Assessment
                 </h3>
@@ -382,13 +411,13 @@ export default function NutritionPage() {
               {nutritionInsight.suggestions?.length > 0 && (
                 <div className="card p-5">
                   <h3 className="text-sm font-bold text-violet-400 mb-3">✅ Actionable Suggestions</h3>
-                  <ul className="space-y-2">
+                  <ol className="space-y-2">
                     {nutritionInsight.suggestions.map((s, i) => (
                       <li key={i} className="flex gap-2 text-sm text-slate-300">
                         <span className="text-emerald-500 font-bold flex-shrink-0">{i + 1}.</span>{s}
                       </li>
                     ))}
-                  </ul>
+                  </ol>
                 </div>
               )}
 

@@ -150,8 +150,8 @@ export interface FoodEntry {
   id: string;
   date: string;       // YYYY-MM-DD
   time: string;       // HH:MM (24h)
-  name: string;       // e.g. "2 boiled eggs + toast"
-  quantity: string;   // e.g. "200g", "1 bowl", "2 pieces"
+  name: string;       // e.g. "1 boiled egg + 4 small rotis + tomato chutney"
+  quantity?: string;  // e.g. "200g", "1 bowl", "1 plate" — optional
   mealType: MealType;
   notes?: string;
   createdAt: string;  // ISO timestamp
