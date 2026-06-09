@@ -80,7 +80,7 @@ export default function ExportPage() {
       waist: m.waist,
       chest: m.chest,
       hips: m.hips,
-      thigh: m.thigh,
+      restingHR: m.restingHR,
     })),
     weightProgress: Object.entries(weightsByExercise).map(([id, weights]) => ({
       exerciseId: id,
