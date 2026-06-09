@@ -1,14 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Dumbbell, BarChart3, Ruler } from "lucide-react";
+import { LayoutDashboard, Calendar, Dumbbell, BarChart3, Utensils } from "lucide-react";
 
 const NAV = [
-  { href: "/",             label: "Dashboard",  Icon: LayoutDashboard },
+  { href: "/",             label: "Home",       Icon: LayoutDashboard },
   { href: "/calendar",     label: "Calendar",   Icon: Calendar },
   { href: "/exercises",    label: "Exercises",  Icon: Dumbbell },
   { href: "/analytics",    label: "Analytics",  Icon: BarChart3 },
-  { href: "/measurements", label: "Measure",    Icon: Ruler },
+  { href: "/nutrition",    label: "Nutrition",  Icon: Utensils },
 ];
 
 export default function NavBar() {

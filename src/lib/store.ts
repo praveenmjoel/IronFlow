@@ -1,9 +1,11 @@
 import { create } from "zustand";
-import type { WorkoutSession, BodyMeasurement, LoggedSet } from "./types";
+import type { WorkoutSession, BodyMeasurement, LoggedSet, FoodEntry, NutritionCoaching } from "./types";
 import { WORKOUT_PROGRAM } from "./workoutData";
 import {
   saveProfile, saveSession, saveMeasurement,
   loadProfile, loadSessions, loadMeasurements,
+  loadFoodEntries, saveFoodEntry, deleteFoodEntry as deleteFoodEntryFS,
+  loadNutritionCoaching, saveNutritionCoaching,
   type ProfileData,
 } from "./firestoreService";
 
@@ -26,6 +28,11 @@ interface AppState {
   measurements: BodyMeasurement[];
   measurementSaveError: string | null;
 
+  /* ─── Nutrition ─── */
+  foodEntries: FoodEntry[];
+  nutritionInsight: NutritionCoaching | null;
+  nutritionLoading: boolean;
+
   /* ─── Stats ─── */
   currentStreak: number;
   longestStreak: number;
@@ -46,6 +53,11 @@ interface AppState {
 
   addMeasurement: (m: Omit<BodyMeasurement, "id">) => void;
   completeOnboarding: (name: string) => void;
+
+  addFoodEntry: (entry: Omit<FoodEntry, "id" | "createdAt">) => Promise<void>;
+  removeFoodEntry: (id: string) => void;
+  setNutritionInsight: (insight: NutritionCoaching) => void;
+  setNutritionLoading: (loading: boolean) => void;
 
   getCompletionPercent: () => number;
 }
@@ -120,6 +132,9 @@ export const useStore = create<AppState>()((set, get) => ({
   onboardingDone: false,
   measurements: [],
   measurementSaveError: null,
+  foodEntries: [],
+  nutritionInsight: null,
+  nutritionLoading: false,
   currentStreak: 0,
   longestStreak: 0,
   totalWorkouts: 0,
@@ -130,10 +145,12 @@ export const useStore = create<AppState>()((set, get) => ({
   setUid: (uid) => set({ uid, authReady: true }),
 
   hydrate: async (uid, googleName, googlePhoto, googleEmail) => {
-    const [profile, sessions, measurements] = await Promise.all([
+    const [profile, sessions, measurements, foodEntries, nutritionInsight] = await Promise.all([
       loadProfile(uid),
       loadSessions(uid),
       loadMeasurements(uid),
+      loadFoodEntries(uid),
+      loadNutritionCoaching(uid),
     ]);
 
     const userName = profile?.userName || googleName || "";
@@ -142,6 +159,8 @@ export const useStore = create<AppState>()((set, get) => ({
     set({
       sessions,
       measurements,
+      foodEntries: foodEntries ?? [],
+      nutritionInsight: nutritionInsight ?? null,
       userName,
       userEmail:      googleEmail ?? null,
       userPhoto:      googlePhoto ?? null,
@@ -326,4 +345,32 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   getCompletionPercent: () => get().activeSession?.completionPercent ?? 0,
+
+  /* ─── Nutrition ─── */
+
+  addFoodEntry: async (entryData) => {
+    const uid = get().uid;
+    if (!uid) return;
+    const entry: FoodEntry = {
+      ...entryData,
+      id: `food-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    set(s => ({ foodEntries: [...s.foodEntries, entry] }));
+    await saveFoodEntry(uid, entry).catch(console.error);
+  },
+
+  removeFoodEntry: (id) => {
+    const uid = get().uid;
+    set(s => ({ foodEntries: s.foodEntries.filter(e => e.id !== id) }));
+    if (uid) deleteFoodEntryFS(uid, id).catch(console.error);
+  },
+
+  setNutritionInsight: (insight) => {
+    set({ nutritionInsight: insight });
+    const uid = get().uid;
+    if (uid) saveNutritionCoaching(uid, insight).catch(console.error);
+  },
+
+  setNutritionLoading: (loading) => set({ nutritionLoading: loading }),
 }));

@@ -141,3 +141,40 @@ export interface ProgressionRecommendation {
 }
 
 export type CheckedReps = Record<string, boolean[]>; // setId → per-rep booleans
+
+/* ─── Nutrition ─── */
+
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack" | "pre-workout" | "post-workout";
+
+export interface FoodEntry {
+  id: string;
+  date: string;       // YYYY-MM-DD
+  time: string;       // HH:MM (24h)
+  name: string;       // e.g. "2 boiled eggs + toast"
+  quantity: string;   // e.g. "200g", "1 bowl", "2 pieces"
+  mealType: MealType;
+  notes?: string;
+  createdAt: string;  // ISO timestamp
+}
+
+export interface NutritionCoaching {
+  id: string;
+  generatedAt: string;
+  entriesAnalyzed: number;
+  overallSummary: string;
+  patterns: string[];
+  concerns: string[];
+  suggestions: string[];
+  recommendedFoods: Array<{
+    name: string;
+    reason: string;
+    howToEat: string;
+  }>;
+  recipes: Array<{
+    name: string;
+    ingredients: string[];
+    steps: string[];
+    nutritionNote: string;
+    bestFor: string;
+  }>;
+}

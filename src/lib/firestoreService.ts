@@ -3,7 +3,7 @@ import {
   getDocs, deleteDoc, writeBatch, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { WorkoutSession, BodyMeasurement } from "./types";
+import type { WorkoutSession, BodyMeasurement, FoodEntry, NutritionCoaching } from "./types";
 
 /* ─── Path helpers ─── */
 const profileRef  = (uid: string) => doc(db, "users", uid, "data", "profile");
@@ -58,4 +58,32 @@ export async function loadMeasurements(uid: string): Promise<BodyMeasurement[]> 
 
 export async function saveMeasurement(uid: string, m: BodyMeasurement): Promise<void> {
   await setDoc(measRef(uid, m.id), m);
+}
+
+/* ─── Nutrition ─── */
+
+const nutritionCol      = (uid: string) => collection(db, "users", uid, "nutrition");
+const nutritionRef      = (uid: string, id: string) => doc(db, "users", uid, "nutrition", id);
+const nutritionCoachRef = (uid: string) => doc(db, "users", uid, "data", "nutritionCoaching");
+
+export async function loadFoodEntries(uid: string): Promise<FoodEntry[]> {
+  const snap = await getDocs(nutritionCol(uid));
+  return snap.docs.map(d => d.data() as FoodEntry);
+}
+
+export async function saveFoodEntry(uid: string, entry: FoodEntry): Promise<void> {
+  await setDoc(nutritionRef(uid, entry.id), entry);
+}
+
+export async function deleteFoodEntry(uid: string, id: string): Promise<void> {
+  await deleteDoc(nutritionRef(uid, id));
+}
+
+export async function saveNutritionCoaching(uid: string, coaching: NutritionCoaching): Promise<void> {
+  await setDoc(nutritionCoachRef(uid), coaching);
+}
+
+export async function loadNutritionCoaching(uid: string): Promise<NutritionCoaching | null> {
+  const snap = await getDoc(nutritionCoachRef(uid));
+  return snap.exists() ? (snap.data() as NutritionCoaching) : null;
 }
