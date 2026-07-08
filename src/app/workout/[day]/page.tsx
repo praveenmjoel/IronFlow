@@ -87,6 +87,7 @@ export default function WorkoutPage({ params }: PageProps) {
         if (r <= 1) {
           clearInterval(timedIntervalRef.current!);
           setTimedSetRunning(false);
+          playDoneSound();
           toggleRepCheck(ex.id, set.id, 0);
           triggerRest(set.restSeconds);
           return 0;
@@ -343,19 +344,23 @@ function WarmupStepRow({ step, index, checked, onChange }: {
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(step.durationSeconds ?? 0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Keep a stable ref to onChange so we never close over a stale copy
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; });
 
   useEffect(() => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
       setRemaining(r => {
-        if (r <= 1) {
-          clearInterval(intervalRef.current!);
+        if (r > 1) return r - 1;
+        // Timer hit zero — defer all side effects outside React's render cycle
+        clearInterval(intervalRef.current!);
+        setTimeout(() => {
           setRunning(false);
           playDoneSound();
-          onChange(true);
-          return 0;
-        }
-        return r - 1;
+          onChangeRef.current(true);
+        }, 0);
+        return 0;
       });
     }, 1000);
     return () => clearInterval(intervalRef.current!);
