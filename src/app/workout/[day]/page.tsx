@@ -315,29 +315,139 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
   );
 }
 
+function playDoneSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const beep = (freq: number, start: number, dur: number, vol = 0.4) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.05);
+    };
+    beep(880, 0,    0.15);
+    beep(1100, 0.18, 0.15);
+    beep(1320, 0.36, 0.3);
+  } catch { /* audio not supported */ }
+}
+
 function WarmupStepRow({ step, index, checked, onChange }: {
   step: WarmupStep; index: number; checked: boolean; onChange: (v: boolean) => void;
 }) {
+  const hasDuration = !!step.durationSeconds;
+  const [running, setRunning] = useState(false);
+  const [remaining, setRemaining] = useState(step.durationSeconds ?? 0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!running) return;
+    intervalRef.current = setInterval(() => {
+      setRemaining(r => {
+        if (r <= 1) {
+          clearInterval(intervalRef.current!);
+          setRunning(false);
+          playDoneSound();
+          onChange(true);
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current!);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+
+  function handleToggleTimer(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (running) {
+      clearInterval(intervalRef.current!);
+      setRunning(false);
+    } else {
+      if (remaining === 0) setRemaining(step.durationSeconds!);
+      setRunning(true);
+    }
+  }
+
+  function handleReset(e: React.MouseEvent) {
+    e.stopPropagation();
+    clearInterval(intervalRef.current!);
+    setRunning(false);
+    setRemaining(step.durationSeconds!);
+  }
+
+  const progress = hasDuration && step.durationSeconds
+    ? ((step.durationSeconds - remaining) / step.durationSeconds) * 100
+    : 0;
+
   return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${checked ? "bg-emerald-500/8 border-emerald-500/25" : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]"}`}
+    <div
+      className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${checked ? "bg-emerald-500/8 border-emerald-500/25" : "bg-white/[0.02] border-white/[0.06]"}`}
     >
-      <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${checked ? "bg-emerald-500 border-emerald-500" : "border-slate-600"}`}>
+      {/* Checkbox */}
+      <button
+        onClick={() => onChange(!checked)}
+        className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${checked ? "bg-emerald-500 border-emerald-500" : "border-slate-600"}`}
+      >
         {checked && <Check size={12} className="text-white" />}
-      </div>
+      </button>
+
+      {/* Label + note */}
       <div className="flex-1 min-w-0">
         <span className={`text-sm font-medium ${checked ? "line-through text-slate-500" : "text-white"}`}>
           {step.activity}
         </span>
-        {(step.reps || step.durationSeconds) && (
-          <span className="text-xs text-slate-400 ml-2">
-            {step.reps ? `${step.reps} reps` : formatDuration(step.durationSeconds!)}
-          </span>
+        {step.reps && (
+          <span className="text-xs text-slate-400 ml-2">{step.reps} reps</span>
         )}
         {step.note && <p className="text-xs text-slate-500 mt-0.5 truncate">{step.note}</p>}
+        {/* Progress bar when timer is running */}
+        {hasDuration && running && (
+          <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-amber-400 transition-all duration-1000"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )}
       </div>
-    </button>
+
+      {/* Timer controls */}
+      {hasDuration && !checked && (
+        <div className="flex-shrink-0 flex items-center gap-1.5">
+          {running ? (
+            <>
+              <span className="text-base font-mono font-bold text-amber-300 w-10 text-right">
+                {formatTimer(remaining)}
+              </span>
+              <button
+                onClick={handleToggleTimer}
+                className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+              >
+                pause
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleToggleTimer}
+                className="flex items-center gap-1 text-xs text-amber-400 border border-amber-400/30 rounded-lg px-2.5 py-1.5 hover:bg-amber-500/10 transition-colors font-medium"
+              >
+                <Play size={11} />
+                {remaining === step.durationSeconds ? formatTimer(remaining) : formatTimer(remaining)}
+              </button>
+              {remaining !== step.durationSeconds && remaining > 0 && (
+                <button onClick={handleReset} className="text-[10px] text-slate-600 hover:text-slate-400">↺</button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
